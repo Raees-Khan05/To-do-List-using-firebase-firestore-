@@ -1,32 +1,9 @@
 
-  // Import the functions you need from the SDKs you need
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-  import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js";
-  import { getAuth ,
-    onAuthStateChanged , 
-    createUserWithEmailAndPassword ,
-    signInWithEmailAndPassword ,
-    signOut 
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
+import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-analytics.js";
+import { getFirestore, collection, addDoc, getDocs, doc, deleteDoc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
 
-
-   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-
-
-
-
-
-
-
-
-
-
-
-  // TODO: Add SDKs for Firebase products that you want to use
-  // https://firebase.google.com/docs/web/setup#available-libraries
-
-  // Your web app's Firebase configuration
-  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
-  const firebaseConfig = {
+const firebaseConfig = {
     apiKey: "AIzaSyARoumL2e85JzTtz9uhxRCaVDDb2mgzbGQ",
     authDomain: "first-project-cc18b.firebaseapp.com",
     projectId: "first-project-cc18b",
@@ -36,123 +13,127 @@
     measurementId: "G-WC0ZSCJ5ES"
   };
 
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
-  const analytics = getAnalytics(app);
-  //   console.log("app=>>" , app);
-  const auth = getAuth(app);
-//   console.log("auth=>>" , auth);\
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+// const analytics = getAnalytics(app);
+const db = getFirestore(app);
+const todosCollection = collection(db, "todos");
+
+const todo_input = document.getElementById("todo_input");
+const add_Todo = document.getElementById("add_Todo");
+const todo_list = document.getElementById("todo_list");
 
 
-var Signup_email = document.getElementById("Signup_email")
-var Signup_password = document.getElementById("Signup_password")
-var signup_btn = document.getElementById("signup_btn")
-
-var login_email = document.getElementById("login_email")
-var login_password = document.getElementById("login_password")
-var login_btn = document.getElementById("login_btn")
+document.addEventListener("DOMContentLoaded", async () => {
+    await getTodosFromDb();
+});
 
 
+add_Todo.addEventListener("click", async () => {
+    await addToDoToDb();
+});
 
-var auth_container = document.getElementById("auth_container")
-var user_container = document.getElementById("user_container")
+async function addToDoToDb() {
+    try {
+        let obj = {
+            todo: todo_input.value,
+            createdAt: new Date().toISOString(),
+        };
 
-
-
-var user_email = document.getElementById("user_email")
-var logout_btn = document.getElementById("logout_btn")
-
-signup_btn.addEventListener("click" , createUserAccount)
-login_btn.addEventListener("click" , logInUser)
-logout_btn.addEventListener("click" , logOut)
-
-
-
-onAuthStateChanged(auth, (user) => {
-    if (user) {
-        console.log("user is logged in");
-        auth_container.style.display = "none"
-        user_container.style.display = "block"
-        user_email.innerText = user.email;
-      // User is signed in, see docs for a list of available properties
-      // https://firebase.google.com/docs/reference/js/auth.user
-      const uid = user.uid;
-      // ...
-    } else {
-        console.log("user is not logged in");
-        auth_container.style.display = "block"
-        user_container.style.display = "none"
-        user_email.innerText = user.email;
-      // User is signed out
-      // ...
+        const docRef = await addDoc(todosCollection, obj);
+        console.log(docRef);
+        todo_input.value = "";
+        await getTodosFromDb(); 
+    } catch (error) {
+        console.log(error);
     }
-  });
-  
+}
 
+async function getTodosFromDb() {
+    try {
+        todo_list.innerHTML = ""; 
 
-  createUserWithEmailAndPassword(auth, email, password)
-  .then((userCredential) => {
-    // Signed up 
-    const user = userCredential.user;
-    // ...
-  })
-  .catch((error) => {
-    const errorCode = error.code;
-    const errorMessage = error.message;
-    // ..
-  });
+        const querySnapshot = await getDocs(todosCollection);
+        querySnapshot.forEach((doc) => {
+            const { todo, createdAt } = doc.data();
+            var ele =
+                `<li id=${doc.id}>
+                    ${todo} - ${new Date(createdAt).toLocaleDateString()}
+                    <button class="delete-btn" data-id="${doc.id}">Delete</button>
+                    <button class="edit-btn" data-id="${doc.id}">Edit</button>
+                </li>`;
 
+            todo_list.innerHTML += ele;
+        });
 
+        attachDeleteListeners(); 
+        attachEditListeners(); 
+    } catch (error) {
+        console.log(error);
+    }
+}
 
-  function createUserAccount () {
-    // console.log(Signup_email.value);
-    // console.l'og(Signup_password.value);
-
-
-    createUserWithEmailAndPassword(auth, Signup_email.value, Signup_password.value)
-  .then((userCredential) => {
-    // Signed up 
-    const user = userCredential.user;
-    console.log("user=>" , user);
-    // ...
-  })
-  .catch((error) => {
-    const errorCode = error.code;
-    const errorMessage = error.message;
-    alert(errorMessage)
-    // ..
-  });
-  }
-
-
-
-  function logInUser() {
-    // console.log(login_email.value);
-    // console.log(login_password.value);
-
-    signInWithEmailAndPassword(auth, login_email.value, login_password.value)
-  .then((userCredential) => {
-    // Signed in 
-    const user = userCredential.user;
-    console.log("user");
-    // ...
-  })
-  .catch((error) => {
-    const errorCode = error.code;
-    const errorMessage = error.message;
-    alert(errorMessage)
-  });
-
-  }
-
-
-  function logOut() {
+function attachDeleteListeners() {
     
-    signOut(auth).then(() => {
-        // Sign-out successful.
-      }).catch((error) => {
-        // An error happened.
-      });
-      
+    const deleteButtons = document.querySelectorAll('.delete-btn');
+    deleteButtons.forEach(button => {
+        button.addEventListener('click', async (e) => {
+            const docId = e.target.getAttribute('data-id');
+            await deleteTodo(docId);
+        });
+    });
+}
 
-  }
+function attachEditListeners() {
+    
+    const editButtons = document.querySelectorAll('.edit-btn');
+    editButtons.forEach(button => {
+        button.addEventListener('click', async (e) => {
+            const docId = e.target.getAttribute('data-id');
+            await editTodo(docId);
+        });
+    });
+}
+
+async function deleteTodo(docId) {
+    try {
+        const todoRef = doc(db, "todos", docId);
+        await deleteDoc(todoRef);
+        console.log("Todo deleted successfully!");
+        await getTodosFromDb();
+    } catch (error) {
+        console.log(error);
+    }
+}
+
+async function editTodo(docId) {
+    try {
+        const todoRef = doc(db, "todos", docId);
+        const todoDoc = await getDoc(todoRef);
+        const todo = todoDoc.data().todo;
+
+        
+        const newTodo = prompt("Edit todo:", todo);
+
+        if (newTodo !== null) { 
+            await updateDoc(todoRef, { todo: newTodo });
+            console.log("Todo updated successfully!");
+            await getTodosFromDb(); 
+        }
+    } catch (error) {
+        console.log(error);
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
